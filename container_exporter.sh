@@ -27,15 +27,18 @@ ips=""
 while read -r line
 do
    read name ip <<< "$line"
-   ips="${ips}container_ip{container=\"$name\"} ${ip}\n"
-   echo -en $ips
-   echo $ip kkk $name
+   if [ "$ip" == "<no value>" ] 
+   then
+           ips="${ips}container_ip{container=\"$name\"} "0"\n"  
+   else
+           ips="${ips}container_ip{container=\"$name\",ip=\"$ip\"} "1"\n"
+   fi
 done <<< "$inspect_ip"
 
 # Write the metrics to a temporary file to get the size
 tmp=$(mktemp)
 echo "# HELP container_ip The IP Address value from docker inspect." > $tmp
-echo "# TYPE container_ip text" >> $tmp
+echo "# TYPE container_ip gauge" >> $tmp
 echo -en "$ips" >> $tmp
 
 # Display the HTTP header
