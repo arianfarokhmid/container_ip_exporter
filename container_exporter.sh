@@ -20,26 +20,23 @@
 #
 
 # Collect the data from all running Docker containers
-stats=$(docker stats --no-trunc --no-stream --format "{{.Name}} {{.CPUPerc}} {{.MemPerc}}" 2>/dev/null)
+inspect_ip=$(docker inspect -f '{{.Config.Hostname}} {{.NetworkSettings.Networks.mysql.IPAddress}} ' $(docker ps -q) 2>/dev/null)
 
 # Extract and prepare the metrics
-cpus=""
-mems=""
+ips=""
 while read -r line
 do
-   read name cpu mem <<< "$line"
-   cpus="${cpus}container_cpu_percent{container=\"$name\"} ${cpu%\%}\n"
-   mems="${mems}container_mem_percent{container=\"$name\"} ${mem%\%}\n"
-done <<< "$stats"
+   read name ip <<< "$line"
+   ips="${ips}container_ip{container=\"$name\"} ${ip}\n"
+   echo -en $ips
+   echo $ip kkk $name
+done <<< "$inspect_ip"
 
 # Write the metrics to a temporary file to get the size
 tmp=$(mktemp)
-echo "# HELP container_cpu_percent The CPU% value from docker-stats." > $tmp
-echo "# TYPE container_cpu_percent gauge" >> $tmp
-echo -en "$cpus" >> $tmp
-echo "# HELP container_mem_percent The MEM% value from docker-stats." >> $tmp
-echo "# TYPE container_mem_percent gauge" >> $tmp
-echo -en "$mems" >> $tmp
+echo "# HELP container_ip The IP Address value from docker inspect." > $tmp
+echo "# TYPE container_ip text" >> $tmp
+echo -en "$ips" >> $tmp
 
 # Display the HTTP header
 echo "HTTP/1.1 200 OK"
